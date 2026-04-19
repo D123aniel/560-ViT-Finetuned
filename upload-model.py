@@ -1,5 +1,7 @@
 from huggingface_hub import HfApi
 
+# Upload model to hugging face
+
 api = HfApi()
 
 api.upload_folder(
