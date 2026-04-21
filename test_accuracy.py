@@ -1,11 +1,17 @@
 import torch
 import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import evaluate
 from datasets import load_dataset, concatenate_datasets
 from transformers import BeitForImageClassification, AutoImageProcessor, Trainer, TrainingArguments
 
+from huggingface_hub import login
+import os
+login(os.getenv("HF_TOKEN"))
+
 def evaluate_test_set():
-    model_path = "./beit_finetuned/checkpoint-470"
+    model_path = "D123aniel/560_ViT_Finetuned"
     dataset_name = "D123aniel/560_ViT_dataset"
     
     # Load the saved model and processor
@@ -46,11 +52,29 @@ def evaluate_test_set():
     )
 
     print("Running evaluation on test set...")
-    results = trainer.evaluate()
+
+    output = trainer.predict(encoded_test)
     
+    # 1. Get predictions and true labels
+    y_preds = np.argmax(output.predictions, axis=1)
+    y_true = output.label_ids
+    
+    # 2. Compute Confusion Matrix
+    # Use the 'id2label' from your model config if available for better labeling
+    labels = list(model.config.id2label.values()) if hasattr(model.config, 'id2label') else None
+    cm = confusion_matrix(y_true, y_preds)
+
     print("------------------------------------------------------------------")
-    print(f"Test Accuracy: {results['eval_accuracy']:.4f}")
+    print(f"Test Accuracy: {output.metrics['test_accuracy']:.4f}")
     print("------------------------------------------------------------------")
+    print("Confusion Matrix:")
+    print(cm)
+    
+    fig, ax = plt.subplots(figsize=(8, 6))
+    display = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels)
+    display.plot(cmap="Blues", ax=ax)
+    plt.title("Confusion Matrix: Fake vs Real")
+    plt.show()
 
 if __name__ == "__main__":
     evaluate_test_set()
